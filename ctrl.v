@@ -18,7 +18,7 @@ module ctrl(Op, Funct7, Funct3, Zero,
    output [4:0] ALUOp;    // ALU opertion
    output [2:0] NPCOp;    // next pc operation
    output       ALUSrc;   // ALU source for A
-	 output [2:0] DMType;
+	 output [2:0] DMType;   //字长类型
    output [1:0] GPRSel;   // general purpose register selection
    output [1:0] WDSel;    // (register) write data selection
    
@@ -41,6 +41,11 @@ module ctrl(Op, Funct7, Funct3, Zero,
 
   // i format
     wire itype_l  = ~Op[6]&~Op[5]&~Op[4]&~Op[3]&~Op[2]&Op[1]&Op[0]; //0000011
+    wire i_lb   =  itype_l& ~Funct3[2]& ~Funct3[1]&~Funct3[0]; // lb 000
+    wire i_lh   =  itype_l& Funct3[2]& ~Funct3[1]&~Funct3[0]; // lh 001
+    wire i_lw   =  itype_l& ~Funct3[2]& Funct3[1]&~Funct3[0]; // lw 010
+    wire i_lbu  =  itype_l& Funct3[2]& Funct3[1]&~Funct3[0]; // lbu 100
+    wire i_lhu  =  itype_l& Funct3[2]& ~Funct3[1]&~Funct3[0]; // lhu 101
 
   // i format
     wire itype_r  = ~Op[6]&~Op[5]&Op[4]&~Op[3]&~Op[2]&Op[1]&Op[0]; //0010011
@@ -61,25 +66,35 @@ module ctrl(Op, Funct7, Funct3, Zero,
   // s format
     wire stype  = ~Op[6]&Op[5]&~Op[4]&~Op[3]&~Op[2]&Op[1]&Op[0];//0100011
     wire i_sw   =  stype& ~Funct3[2]& Funct3[1]&~Funct3[0]; // sw 010
+  // s format added by me  
+    wire i_sh   =  stype& Funct3[2]& Funct3[1]&~Funct3[0]; // sh 001
+    wire i_sb   =  stype& Funct3[2]& ~Funct3[1]&~Funct3[0]; // sb 000
+
 
   // sb format
     wire sbtype  = Op[6]&Op[5]&~Op[4]&~Op[3]&~Op[2]&Op[1]&Op[0];//1100011
     wire i_beq  = sbtype& ~Funct3[2]& ~Funct3[1]&~Funct3[0]; // beq
-	
+	// sb format added by me
+    wire i_bne =  sbtype& ~Funct3[2]& ~Funct3[1]& Funct3[0]; // bne
+    wire i_blt =  sbtype& Funct3[2]& ~Funct3[1]&~Funct3[0]; // blt
+    wire i_bge =  sbtype& Funct3[2]& Funct3[1]&~Funct3[0]; // bge
+    wire i_bltu =  sbtype& Funct3[2]& ~Funct3[1]& Funct3[0]; // bltu
+    wire i_bgeu =  sbtype& Funct3[2]& Funct3[1]& Funct3[0]; // bgeu
+
   // j format
     wire i_jal  = Op[6]& Op[5]&~Op[4]& Op[3]& Op[2]& Op[1]& Op[0];  // jal 1101111
 
-  // u format
+  // u format added by me
     wire utype  = ~Op[6]&~Op[5]&~Op[4]&~Op[3]&~Op[2]&Op[1]&Op[0]; //0010111
     wire i_lui  = utype& ~Funct3[2]& ~Funct3[1]&~Funct3[0]; // lui 011
     wire i_auipc  = utype& ~Funct3[2]& Funct3[1]&~Funct3[0]; // auipc 010
 
 
   // generate control signals
-  assign RegWrite   = rtype | itype_r | i_jalr | i_jal | utype; // register write
+  assign RegWrite   = rtype | itype_r | i_jalr | i_jal | utype | ; // register write
   assign MemWrite   = stype;                           // memory write
-  assign ALUSrc     = itype_r | stype | i_jal | i_jalr;   // ALU B is from instruction immediate
-
+  assign ALUSrc     = itype_r | stype | i_jal | i_jalr | utype | itype_l;   // ALU B is from instruction immediate
+  assign MemRead    = itype_l;                           // memory read
 
 
   // signed extension (several methods to extend the immediate numbers)
@@ -90,19 +105,18 @@ module ctrl(Op, Funct7, Funct3, Zero,
   // EXT_CTRL_UTYPE	      6'b000010
   // EXT_CTRL_JTYPE	      6'b000001
   assign EXTOp[5]  = i_srai|i_srli|i_slli; 
-  assign EXTOp[4]  = i_ori | i_andi | i_jalr | i_xori | i_addi | i_slti | i_sltiu;  
+  assign EXTOp[4]  = i_ori | i_andi | i_jalr | i_xori | i_addi | i_slti | i_sltiu | itype_l;  
   assign EXTOp[3]  = stype; 
   assign EXTOp[2]  = sbtype; 
-  assign EXTOp[1]  = 0;   
+  assign EXTOp[1]  = utype;   
   assign EXTOp[0]  = i_jal;         
   
   
   // WDSel_FromALU 2'b00
   // WDSel_FromMEM 2'b01
   // WDSel_FromPC  2'b10
-  // WDSel_FromIM  2'b11 我新加的一个寄存器写入选项，用于lui指令，写入数据可能直接来自于生成的立即数
-  assign WDSel[0] = itype_l | i_lui;
-  assign WDSel[1] = i_jal | i_jalr| i_lui;
+  assign WDSel[0] = itype_l;
+  assign WDSel[1] = i_jal | i_jalr;
 
   // NPC_PLUS4   3'b000
   // NPC_BRANCH  3'b001
@@ -132,10 +146,15 @@ module ctrl(Op, Funct7, Funct3, Zero,
 // `define ALUOp_srl 5'b10000
 // `define ALUOp_sra 5'b10001
 
-	assign ALUOp[0] = itype_l|stype|i_addi|i_ori|i_add|i_or|i_sll|i_sra|i_sltu|i_slli|i_srai|i_sltiu;
-	assign ALUOp[1] = itype_l|stype|i_addi|i_add|i_and|i_andi|i_sll|i_slt|i_sltu|i_slli|i_slti|i_sltiu;
-	assign ALUOp[2] = i_andi|i_and|i_ori|i_or|i_beq|i_sub|i_xor|i_xori|i_sll|i_slli;
-	assign ALUOp[3] = i_andi|i_and|i_ori|i_or|i_xor|i_xori|i_sll|i_slt|i_sltu|i_slli|i_slti|i_sltiu;
+	assign ALUOp[0] = i_jalr|itype_l|stype|i_addi|i_ori|i_add|i_or|i_sll|i_sra|i_sltu|i_slli|i_srai|i_sltiu|i_lui|i_bne|i_bge|i_bgeu;
+	assign ALUOp[1] = i_jalr|itype_l|stype|i_addi|i_add|i_and|i_andi|i_sll|i_slt|i_sltu|i_slli|i_slti|i_sltiu|i_auipc|i_blt|i_bge;
+	assign ALUOp[2] = i_andi|i_and|i_ori|i_or|i_beq|i_sub|i_xor|i_xori|i_sll|i_slli|i_bne|i_blt|i_bge;
+	assign ALUOp[3] = i_andi|i_and|i_ori|i_or|i_xor|i_xori|i_sll|i_slt|i_sltu|i_slli|i_slti|i_sltiu|i_bltu|i_bgeu;
 	assign ALUOp[4] = i_sra|i_srl|i_srai|i_srli;
+
+  //000 w  001h  010hu  011b  100bu
+  assign DMType[0] =i_lh|i_sh|i_lb|i_sb;
+  assign DMType[1] =i_lhu|i_lb|i_sb;
+  assign DMType[2] =i_lbu;
 
 endmodule
