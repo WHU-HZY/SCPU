@@ -1,7 +1,7 @@
 `include "ctrl_encode_def.v"
 module EXT( 
-	input [4:0] iimm_shamt,
-    	input	[11:0]			iimm, //instr[31:20], 12 bits
+	input 	[4:0] 			iimm_shamt,
+    input	[11:0]			iimm, //instr[31:20], 12 bits
 	input	[11:0]			simm, //instr[31:25, 11:7], 12 bits
 	input	[11:0]			bimm, //instrD[31], instrD[7], instrD[30:25], instrD[11:8], 12 bits
 	input	[19:0]			uimm,
@@ -12,13 +12,13 @@ module EXT(
    
 always  @(*)
 	 case (EXTOp)
-		`EXT_CTRL_ITYPE_SHAMT:   immout<={27'b0,iimm_shamt[4:0]};
-		`EXT_CTRL_ITYPE:	immout <= {{{32-12}{iimm[11]}}, iimm[11:0]};
-		`EXT_CTRL_STYPE:	immout <= {{{32-12}{simm[11]}}, simm[11:0]};
-		`EXT_CTRL_BTYPE:        immout <= {{{32-13}{bimm[11]}}, bimm[11:0], 1'b0};
-		`EXT_CTRL_UTYPE:	immout <= {uimm[19:0], 12'b0}; //???????????12??0
-		`EXT_CTRL_JTYPE:	immout <= {{{32-21}{jimm[19]}}, jimm[19:0], 1'b0};
-		default:	        immout <= 32'b0;
+		`EXT_CTRL_ITYPE_SHAMT:   	immout<={27'b0,iimm_shamt[4:0]};//位移数高位补0
+		`EXT_CTRL_ITYPE:			immout <= {{{32-12}{iimm[11]}}, iimm[11:0]};//12位立即数高位补符号位
+		`EXT_CTRL_STYPE:			immout <= {{{32-12}{simm[11]}}, simm[11:0]};//12位立即数高位补符号位
+		`EXT_CTRL_BTYPE:       		immout <= {{{32-13}{bimm[11]}}, bimm[11:0], 1'b0};//12位立即数高位补符号位左移1位
+		`EXT_CTRL_UTYPE:			immout <= {uimm[19:0], 12'b0}; //20位立即数左移12位低位补0
+		`EXT_CTRL_JTYPE:			immout <= {{{32-21}{jimm[19]}}, jimm[19:0], 1'b0};//20位立即数高位补符号位左移1位
+		default:	        		immout <= 32'b0;//默认置零
 	 endcase
 
        

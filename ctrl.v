@@ -152,9 +152,9 @@ module ctrl(Op, Funct7, Funct3, Zero,
 	assign ALUOp[3] = i_andi|i_and|i_ori|i_or|i_xor|i_xori|i_sll|i_slt|i_sltu|i_slli|i_slti|i_sltiu|i_bltu|i_bgeu;
 	assign ALUOp[4] = i_sra|i_srl|i_srai|i_srli;
 
-  //000 w  001h  010hu  011b  100bu
-  assign DMType[0] =i_lh|i_sh|i_lb|i_sb;
-  assign DMType[1] =i_lhu|i_lb|i_sb;
+  //000 w  001h  010b  011hu  100bu
+  assign DMType[0] =i_lh | i_lhu | i_sh;
+  assign DMType[1] =i_lhu | i_lb | i_sb;
   assign DMType[2] =i_lbu;
 
 endmodule
