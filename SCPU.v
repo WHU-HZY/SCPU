@@ -4,7 +4,7 @@ module SCPU(
     input      reset,          // reset
     input [31:0]  inst_in,     // instruction
     input [31:0]  Data_in,     // data from data memory
-   
+    output [31:0] pcW,
     output    mem_w,          // output: memory write signal
     output [31:0] PC_out,     // PC address
       // memory write
@@ -12,15 +12,15 @@ module SCPU(
     output [31:0] Data_out,// data to data memory
 
     input  [4:0] reg_sel,    // register selection (for debug use)
-    output [31:0] reg_data  // selected register data (for debug use)
-//output [2:0] DMType
+    output [31:0] reg_data,  // selected register data (for debug use)
+    output [2:0] DMType
 );
     wire        RegWrite;    // control signal to register write
     wire [5:0]       EXTOp;       // control signal to signed extension
     wire [4:0]  ALUOp;       // ALU opertion
     wire [2:0]  NPCOp;       // next PC operation
 
-    wire [1:0]  WDSel;       // (register) write data selection
+    wire [2:0]  WDSel;       // (register) write data selection
     wire [1:0]  GPRSel;      // general purpose register selection
    
     wire        ALUSrc;      // ALU source for A
@@ -72,11 +72,11 @@ assign Addr_out=aluout;
 		.Op(Op), .Funct7(Funct7), .Funct3(Funct3), .Zero(Zero), 
 		.RegWrite(RegWrite), .MemWrite(mem_w),
 		.EXTOp(EXTOp), .ALUOp(ALUOp), .NPCOp(NPCOp), 
-		.ALUSrc(ALUSrc), .GPRSel(GPRSel), .WDSel(WDSel)
+		.ALUSrc(ALUSrc), .GPRSel(GPRSel), .WDSel(WDSel),.DMType(DMType)
 	);
  // instantiation of pc unit
 	PC U_PC(.clk(clk), .rst(reset), .NPC(NPC), .PC(PC_out) );
-	NPC U_NPC(.PC(PC_out), .NPCOp(NPCOp), .IMM(immout), .NPC(NPC), .aluout(aluout));
+	NPC U_NPC(.PC(PC_out), .NPCOp(NPCOp), .IMM(immout), .NPC(NPC), .aluout(aluout),.pcW(pcW));
 	EXT U_EXT(
 		.iimm_shamt(iimm_shamt), .iimm(iimm), .simm(simm), .bimm(bimm),
 		.uimm(uimm), .jimm(jimm),
@@ -99,10 +99,12 @@ always @*
 begin
 	case(WDSel)
 		`WDSel_FromALU: WD<=aluout;
-		`WDSel_FromMEM: WD<=Data_in;
+		`WDSel_lw: WD<=Data_in;
+		`WDSel_lh: WD<=$signed(Data_in[15:0]);
+		`WDSel_lhu: WD<=$unsigned(Data_in[15:0]);
+		`WDSel_lb: WD<=$signed(Data_in[7:0]);
+		`WDSel_lbu: WD<=$unsigned(Data_in[7:0]);
 		`WDSel_FromPC: WD<=PC_out+4;
 	endcase
 end
-
-
 endmodule

@@ -18,6 +18,7 @@ module alu(A, B, ALUOp, C, Zero,PC);
 `ALUOp_auipc:C=PC+B;
 `ALUOp_add:C=A+B;
 `ALUOp_sub:C=A-B;
+`ALUOp_beq:C={31'b0,(A!=B)};
 `ALUOp_bne:C={31'b0,(A==B)};
 `ALUOp_blt:C={31'b0,(A>=B)};
 `ALUOp_bge:C={31'b0,(A<B)};
@@ -38,3 +39,4 @@ module alu(A, B, ALUOp, C, Zero,PC);
 
 endmodule
     
+ 

@@ -23,9 +23,13 @@
 `define GPRSel_RT 2'b01
 `define GPRSel_31 2'b10
 
-`define WDSel_FromALU 2'b00
-`define WDSel_FromMEM 2'b01
-`define WDSel_FromPC 2'b10
+`define WDSel_FromALU 3'b000
+`define WDSel_lw 3'b001
+`define WDSel_lh 3'b010
+`define WDSel_lhu 3'b011
+`define WDSel_lb 3'b100
+`define WDSel_lbu 3'b101
+`define WDSel_FromPC 3'b110
 
 `define ALUOp_nop 5'b00000
 `define ALUOp_lui 5'b00001
@@ -45,6 +49,7 @@
 `define ALUOp_sll 5'b01111
 `define ALUOp_srl 5'b10000
 `define ALUOp_sra 5'b10001
+`define ALUOp_beq 5'b10010
 
 `define dm_word 3'b000
 `define dm_halfword 3'b001
